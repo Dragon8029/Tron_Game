@@ -59,7 +59,8 @@ function handleKeyPress(event) {
     if (key === 37 || key === 38 || key === 39 || key === 40) {
         event.preventDefault();
     };
-    setKey (key, p1, 38, 39, 40, 37); // arrow keys
+    setKey(key, p1, 73, 76, 75, 74); // IJKL
+    // setKey (key, p1, 38, 39, 40, 37); // arrow keys
     setKey (key, p2, 87, 68, 83, 65); // WASD
 };
 
@@ -102,7 +103,7 @@ function drawStartingPositions(players) {
         context.fillStyle = p.color;
         context.fillRect(p.x, p.y, unit, unit);
         context.strokeStyle = 'black';
-        context.strokRect(p.x, p.y, unit, unit);
+        context.strokeRect(p.x, p.y, unit, unit);
     });
 };
 
@@ -112,6 +113,20 @@ let outcome, winnerColor, playerCount = Player.allInstances.length;
 
 function draw() {
     if (Player.allInstances.filter(p => !p.key).length === 0) {
+
+        if (playerCount === 1) {
+            const alivePlayers = Player.allInstances.filter(p => p.dead === false);
+            outcome = `Player ${alivePlayers[0]._id} wins!`;
+            winnerColor = alivePlayers[0].color;
+        } else if (playerCount === 0) {
+            outcome = 'Draw!';
+        }
+
+        if (outcome) {
+            createResultsScreen(winnerColor);
+            clearInterval(game);
+        };
+
         Player.allInstances.forEach(p => {
 
             if (p.key) {
@@ -142,3 +157,74 @@ function draw() {
 
 let game = setInterval(draw, 100);
 
+function createResultsScreen(color) {
+    const resultNode = document.createElement('div');
+    resultNode.id = 'result';
+    resultNode.style.color = color || '#fff';
+    resultNode.style.position = 'fixed';
+    resultNode.style.top = 0;
+    resultNode.style.display = 'grid';
+    resultNode.style.gridTemplateColumns = '1fr';
+    resultNode.style.width = '100%';
+    resultNode.style.height = '100vh';
+    resultNode.style.justifyContent = 'center';
+    resultNode.style.alignItems = 'center';
+    resultNode.style.background = '#00000088'
+
+    const resultText = document.createElement('h1');
+    resultText.innerText = outcome;
+    resultText.style.fontFamily = 'Bungee, cursive';
+    resultText.style.textTransform = 'uppercase';
+
+    const replayButton = document.createElement('button');
+    replayButton.innerText = 'Replay (Enter)';
+    replayButton.style.fontFamily = 'Bungee, cursive';
+    replayButton.style.textTransform = 'uppercase';
+    replayButton.style.padding = '10px 30px';
+    replayButton.style.fontSize = '1.2rem';
+    replayButton.style.margin = '0 auto';
+    replayButton.style.cursor = 'pointer';
+    replayButton.onclick = resetGame;
+
+    resultNode.appendChild(resultText);
+    resultNode.appendChild(replayButton);
+    document.querySelector('body').appendChild(resultNode);
+
+    document.addEventListener('keydown', (e) => {
+        let key = event.keyCode;
+        if (key == 13 || key == 32 || key == 27 || key == 82)
+            resetGame();
+    });
+};
+
+function resetGame() {
+    // Remove the results node
+    const result = document.getElementById('result');
+    if (result) result.remove();
+
+    // Remove background then re-draw it
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackground();
+
+    // Reset playableCells
+    playableCells = getPlayableCells(canvas, unit);
+
+    // Reset players
+    Player.allInstances.forEach(p => {
+        p.x = p.startX;
+        p.y = p.startY; 
+        p.dead = false;
+        p.direction = '';
+        p.key = '';
+    });
+    playerCount = Player.allInstances.length;
+    drawStartingPositions(Player.allInstances);
+
+    // Reset outcome
+    outcome = '';
+    winnerColor = '';
+
+    // Ensure draw() has stopped, then re-trigger it
+    clearInterval(game);
+    game = setInterval(draw, 100);
+};
